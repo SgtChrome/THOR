@@ -10,6 +10,7 @@ import numpy as np
 import sys
 from imutils.video import FPS
 import json
+from trackingmultiple import Controltool
 
 from trackers.tracker import SiamFC_Tracker, SiamRPN_Tracker, SiamMask_Tracker
 from benchmark.bench_utils.bbox_helper import cxy_wh_2_rect, xyxy_to_xywh
@@ -76,13 +77,34 @@ def bb_on_im(im, location, mask):
 
     return im
 
-def show_webcam(tracker, mirror=False, viz=False):
+def controlloop():
+    #for videoname, signal in videofilelist:
+    startframe, stopframe, video_name =  ct.initialize(0)
+    positionlist = ct.get_start_position()
+    outputlist = []
+    # track every marked signal in image, for only one signal append [:1] to positionlist
+    for index, position in enumerate(positionlist[:1], 1):
+        startposition = (position.xmin, position.ymin, position.xmax-position.xmin, position.ymax-position.ymin)
+        position_x_y_w_h = [position.xmin, position.ymin, position.xmax, position.ymax]
+        outputlist.append(main(index, len(positionlist), startframe, stopframe, startposition, position_x_y_w_h, video_name))
+    # write tracked signals as (frame1)s1xmin,s1ymin,s1xmax,s1ymax-s2xmin,s2ymin,s2xmax,s2ymax-...
+    #                          (frame2)s1xmin,s1ymin,s1xmax,s1ymax-s2xmin,s2ymin,s2xmax,s2ymax-...
+    with open("D:/Users/Frederic/DokumenteDokumente/INAVET/Versuch/boxes/versuch.txt", "w+") as boxesfile:
+        outputstring = ''
+        rows = len(outputlist[0])
+        for i in range(0, rows):
+            for positionlist in outputlist:
+                outputstring += ','.join(positionlist[i]) + '-'
+            outputstring += '\n'
+        boxesfile.write(outputstring)
+
+def show_webcam(tracker, ct, startframe, mirror=False, viz=False):
     global initialize
 
-    vs = cv2.VideoCapture(0)
+    """ vs = cv2.VideoCapture(0)
     cv2.namedWindow('Webcam', cv2.WINDOW_NORMAL)
     cv2.resizeWindow('Webcam', OUTPUT_WIDTH, OUTPUT_HEIGHT)
-    cv2.setMouseCallback('Webcam', on_mouse, 0)
+    cv2.setMouseCallback('Webcam', on_mouse, 0) """
 
     outputBoxToDraw = None
     bbox = None
@@ -91,11 +113,13 @@ def show_webcam(tracker, mirror=False, viz=False):
     mask = []
 
     # loop over video stream ims
-    while True:
-        _, im = vs.read()
+    output = []
+    f = startframe
+    counter = 1
+    starttime = time.time()
 
-        if mirror:
-            im = cv2.flip(im, 1)
+    while f < startframe + 900:
+        im = ct.get_frame_from_index(f)
 
         if mousedown:
             (x1, y1, x2, y2) = [int(l) for l in boxToDraw]
@@ -113,6 +137,10 @@ def show_webcam(tracker, mirror=False, viz=False):
                 state = tracker.track(im, state)
                 location = cxy_wh_2_rect(state['target_pos'], state['target_sz'])
                 (cx, cy, w, h) = [int(l) for l in location]
+                """
+                bboxi = [cx, cy, cx + w, cy + h]
+                bboxi = [str(x) for x in bboxi]
+                output.append(bboxi) """
 
                 fps.update()
                 fps.stop()
@@ -154,17 +182,11 @@ def load_cfg(args):
     cfg = json.load(open(json_path))
     return cfg
 
-class argsis:
-    def __init__():
-        self.viz = True
-        self.verbose = True
-        self.tracker = 'SiamFC'
-        self.lb_type = ensemble
-        self.vanilla = False
-
 if __name__ == '__main__':
-    #args = parser.parse_args()
-    args = argsis()
+    ct = Controltool()
+    startframe, stopframe, video_name =  ct.initialize(0)
+
+    args = parser.parse_args()
     cfg = load_cfg(args)
     cfg['THOR']['viz'] = args.viz
     cfg['THOR']['verbose'] = args.verbose
@@ -182,4 +204,4 @@ if __name__ == '__main__':
         raise ValueError(f"Tracker {args.tracker} does not exist.")
 
     print("[INFO] Starting video stream.")
-    show_webcam(tracker, mirror=True, viz=args.viz)
+    show_webcam(tracker, ct, mirror=True, viz=args.viz)
