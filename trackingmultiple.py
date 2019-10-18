@@ -28,7 +28,7 @@ class Controltool:
     # videodict stores [path_to_video] = [Frame1,Frame2,...] see Frame class
     videodict = {}
     videofilelist = []
-    wd = '/home/frederic/THOR'
+    wd = '/home/frederic/THOR/personaldata'
 
     def __init__(self):
         self.vidcap = None

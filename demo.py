@@ -99,7 +99,7 @@ def controlloop():
         boxesfile.write(outputstring)
 
 def show_webcam(tracker, ct, startframe, mirror=False, viz=False):
-    global initialize
+    initialize = True
 
     """ vs = cv2.VideoCapture(0)
     cv2.namedWindow('Webcam', cv2.WINDOW_NORMAL)
@@ -116,7 +116,7 @@ def show_webcam(tracker, ct, startframe, mirror=False, viz=False):
     output = []
     f = startframe
     counter = 1
-    starttime = time.time()
+    #starttime = time.time()
 
     while f < startframe + 900:
         im = ct.get_frame_from_index(f)
@@ -132,7 +132,7 @@ def show_webcam(tracker, ct, startframe, mirror=False, viz=False):
                 init_sz = boxToDraw_xywh[[2, 3]]
                 state = tracker.setup(im, init_pos, init_sz)
                 initialize = False
-                fps = FPS().start()
+                #fps = FPS().start()
             else:
                 state = tracker.track(im, state)
                 location = cxy_wh_2_rect(state['target_pos'], state['target_sz'])
@@ -182,11 +182,20 @@ def load_cfg(args):
     cfg = json.load(open(json_path))
     return cfg
 
+class argsis:
+    def __init__(self):
+        self.viz = True
+        self.verbose = True
+        self.tracker = 'SiamFC'
+        self.lb_type = 'ensemble'
+        self.vanilla = False
+
 if __name__ == '__main__':
     ct = Controltool()
     startframe, stopframe, video_name =  ct.initialize(0)
 
-    args = parser.parse_args()
+    # args = parser.parse_args()
+    args = argsis()
     cfg = load_cfg(args)
     cfg['THOR']['viz'] = args.viz
     cfg['THOR']['verbose'] = args.verbose
@@ -204,4 +213,4 @@ if __name__ == '__main__':
         raise ValueError(f"Tracker {args.tracker} does not exist.")
 
     print("[INFO] Starting video stream.")
-    show_webcam(tracker, ct, mirror=True, viz=args.viz)
+    show_webcam(tracker, ct, startframe, mirror=True, viz=args.viz)

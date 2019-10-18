@@ -163,8 +163,8 @@ class argsis:
         self.vanilla = False
 
 if __name__ == '__main__':
-    #args = parser.parse_args()
-    args = argsis()
+    args = parser.parse_args()
+    #args = argsis()
     cfg = load_cfg(args)
     cfg['THOR']['viz'] = args.viz
     cfg['THOR']['verbose'] = args.verbose

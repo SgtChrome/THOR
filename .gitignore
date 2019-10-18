@@ -5,6 +5,8 @@ trackers/SiamRPN/model.pth
 trackers/SiamMask/model.pth
 trackers/SiamRPN_PP/model.pth
 trackers/SiamRPN_PP/model_otb.pth
+*.mp4
+GOPR*.txt
 
 # benchmark result files
 benchmark/results/VOT2018
