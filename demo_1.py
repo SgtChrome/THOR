@@ -101,10 +101,10 @@ def controlloop():
 def show_webcam(tracker, ct, startframe, mirror=False, viz=False):
     initialize = True
 
-    """ vs = cv2.VideoCapture(0)
+    #vs = cv2.VideoCapture(0)
     cv2.namedWindow('Webcam', cv2.WINDOW_NORMAL)
-    cv2.resizeWindow('Webcam', OUTPUT_WIDTH, OUTPUT_HEIGHT)
-    cv2.setMouseCallback('Webcam', on_mouse, 0) """
+    cv2.resizeWindow('Webcam', 1920, 1080)
+    cv2.setMouseCallback('Webcam', on_mouse, 0)
 
     outputBoxToDraw = None
     bbox = None
@@ -117,60 +117,65 @@ def show_webcam(tracker, ct, startframe, mirror=False, viz=False):
     f = startframe
     counter = 1
     #starttime = time.time()
+    size = (1920, 1080)
+    out = cv2.VideoWriter('/home/frederic/test/thor_siamrpn.avi', cv2.VideoWriter_fourcc(*'DIVX'), 50, size)
 
-    while f < startframe + 900:
+    while f < startframe + 600:
         im = ct.get_frame_from_index(f)
+        cv2.imshow("Webcam", im)
 
-        if initialize:
-            x1 = 1001
-            x2 = 1011
-            y1 = 536
-            y2 = 577
-            init_pos = np.array([x1, y2])
-            init_sz = np.array([x2-x2, y2-y1])
+        if mousedown:
+            (x1, y1, x2, y2) = [int(l) for l in boxToDraw]
             cv2.rectangle(im, (x1, y1), (x2, y2),
                           BRIGHTGREEN, PADDING)
-            state = tracker.setup(im, init_pos, init_sz)
-            initialize = False
-            fps = FPS().start()
-        else:
-            state = tracker.track(im, state)
-            location = cxy_wh_2_rect(state['target_pos'], state['target_sz'])
-            (cx, cy, w, h) = [int(l) for l in location]
-            """
-            bboxi = [cx, cy, cx + w, cy + h]
-            bboxi = [str(x) for x in bboxi]
-            output.append(bboxi) """
 
-            fps.update()
-            fps.stop()
-
-            # Display the image
-            info = [
-                ("Score:", f"{state['score']:.4f}"),
-                ("FPS:", f"{fps.fps():.2f}"),
-            ]
-
-            if not state['score'] > 0.8:
-                info.insert(0, ("Object lost since", ""))
+        elif mouseupdown:
+            if initialize:
+                init_pos = boxToDraw_xywh[[0, 1]]
+                init_sz = boxToDraw_xywh[[2, 3]]
+                state = tracker.setup(im, init_pos, init_sz)
+                initialize = False
+                fps = FPS().start()
             else:
-                if 'mask' in state.keys():
-                    mask = state['mask'] > state['p'].seg_thr
-                im = bb_on_im(im, location, mask)
+                state = tracker.track(im, state)
+                location = cxy_wh_2_rect(state['target_pos'], state['target_sz'])
+                (cx, cy, w, h) = [int(l) for l in location]
+                """
+                bboxi = [cx, cy, cx + w, cy + h]
+                bboxi = [str(x) for x in bboxi]
+                output.append(bboxi) """
 
-            for (i, (k, v)) in enumerate(info):
-                text = "{}: {}".format(k, v)
-                cv2.putText(im, text, (10, OUTPUT_HEIGHT - ((i * 20) + 20)),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+                fps.update()
+                fps.stop()
 
-        cv2.imshow("Webcam", im)
-        f += 1
-        # check for escape key
+                # Display the image
+                info = [
+                    ("Score:", f"{state['score']:.4f}"),
+                    ("FPS:", f"{fps.fps():.2f}"),
+                ]
+
+                if not state['score'] > 0.8:
+                    info.insert(0, ("Object lost since", ""))
+                else:
+                    if 'mask' in state.keys():
+                        mask = state['mask'] > state['p'].seg_thr
+                    im = bb_on_im(im, location, mask)
+
+                for (i, (k, v)) in enumerate(info):
+                    text = "{}: {}".format(k, v)
+                    cv2.putText(im, text, (10, OUTPUT_HEIGHT - ((i * 20) + 20)),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+
+                cv2.imshow("Webcam", im)
+                f += 1
+                # check for escape key
+                out.write(im)
         key = cv2.waitKey(1)
         if key==27 or key==1048603:
             break
 
     # release the pointer
+    out.release()
     cv2.destroyAllWindows()
 
 def load_cfg(args):
@@ -186,13 +191,13 @@ class argsis:
     def __init__(self):
         self.viz = True
         self.verbose = True
-        self.tracker = 'SiamFC'
+        self.tracker = 'SiamRPN'
         self.lb_type = 'ensemble'
         self.vanilla = False
 
 if __name__ == '__main__':
     ct = Controltool()
-    startframe, stopframe, video_name =  ct.initialize(0)
+    startframe, stopframe, video_name = ct.initialize(0)
 
     # args = parser.parse_args()
     args = argsis()
